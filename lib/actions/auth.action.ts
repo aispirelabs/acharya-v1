@@ -2,7 +2,7 @@
 
 import { auth, db } from "@/firebase/admin";
 import { cookies } from "next/headers";
-
+import { User, SignInParams, SignUpParams } from "@/types";
 // Session duration (1 week)
 const SESSION_DURATION = 60 * 60 * 24 * 7;
 
@@ -58,7 +58,7 @@ export async function signUp(params: SignUpParams) {
 
     // For Google users, get their profile photo
     let photoURL = "/user-avatar.jpg"; // Default avatar
-    
+
     if (!password) {
       try {
         // Get the user from Firebase Auth
@@ -71,27 +71,30 @@ export async function signUp(params: SignUpParams) {
         // Continue with default photo if there's an error
       }
     }
-    
+
     // save user to db with only the necessary fields
-    await db.collection("users").doc(uid).set({
-      name,
-      email,
-      createdAt: new Date().toISOString(),
-      // If the user signed up with Google, store that information
-      authProvider: password ? "email" : "google",
-      // Use the Google profile photo if available, otherwise use default
-      photoURL: photoURL,
-    });
+    await db
+      .collection("users")
+      .doc(uid)
+      .set({
+        name,
+        email,
+        createdAt: new Date().toISOString(),
+        // If the user signed up with Google, store that information
+        authProvider: password ? "email" : "google",
+        // Use the Google profile photo if available, otherwise use default
+        photoURL: photoURL,
+      });
 
     return {
       success: true,
-      message: password 
-        ? "Account created successfully. Please sign in." 
+      message: password
+        ? "Account created successfully. Please sign in."
         : "Google account created successfully.",
     };
   } catch (error: unknown) {
     console.error("Error creating user:", error);
-    
+
     // Handle Firebase specific errors
     if ((error as { code?: string }).code === "auth/email-already-exists") {
       return {
@@ -120,7 +123,7 @@ export async function signIn(params: SignInParams) {
 
   try {
     console.log("Starting sign in process for:", email);
-    
+
     const userRecord = await auth.getUserByEmail(email);
     if (!userRecord) {
       console.log("User not found in Firebase Auth");
@@ -129,14 +132,17 @@ export async function signIn(params: SignInParams) {
         message: "User does not exist. Create an account.",
       };
     }
-    
+
     // Get user from Firestore to check auth provider
-    const firestoreUser = await db.collection("users").doc(userRecord.uid).get();
+    const firestoreUser = await db
+      .collection("users")
+      .doc(userRecord.uid)
+      .get();
     const userData = firestoreUser.data();
     const isGoogleUser = userData?.authProvider === "google";
-    
+
     console.log("User auth provider:", userData?.authProvider);
-    
+
     // Skip email verification check for Google users as they're already verified
     if (!userRecord.emailVerified && !isGoogleUser) {
       console.log("Email not verified for non-Google user");
@@ -154,7 +160,7 @@ export async function signIn(params: SignInParams) {
         message: "Failed to create session. Please try again.",
       };
     }
-    
+
     console.log("Sign in successful for:", email);
     return {
       success: true,
@@ -182,9 +188,12 @@ export async function getCurrentUser(): Promise<User | null> {
   try {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("session")?.value;
-    
-    console.log("Checking session cookie:", sessionCookie ? "exists" : "not found");
-    
+
+    console.log(
+      "Checking session cookie:",
+      sessionCookie ? "exists" : "not found",
+    );
+
     if (!sessionCookie) {
       console.log("No session cookie found");
       return null;
@@ -198,18 +207,18 @@ export async function getCurrentUser(): Promise<User | null> {
       .collection("users")
       .doc(decodedClaims.uid)
       .get();
-    
+
     if (!userRecord.exists) {
       console.log("User record not found in Firestore");
       return null;
     }
-    
+
     const userData = userRecord.data();
     const isGoogleUser = userData?.authProvider === "google";
-    
+
     // Get the user from Auth to check email verification
     const authUser = await auth.getUser(decodedClaims.uid);
-    
+
     // Skip email verification check for Google users
     if (!authUser.emailVerified && !isGoogleUser) {
       console.log("Email not verified for non-Google user");
@@ -237,21 +246,21 @@ export async function isAuthenticated() {
 
 // Add this function to your existing auth.action.ts file
 
-export async function updateUserAvatar({ 
-  userId, 
-  photoURL 
-}: { 
-  userId: string; 
+export async function updateUserAvatar({
+  userId,
+  photoURL,
+}: {
+  userId: string;
   photoURL: string;
 }) {
   try {
     const userRef = db.collection("users").doc(userId);
-    
+
     await userRef.update({
-      photoURL
+      photoURL,
     });
-    
-    return { success: true, message: "Your avatar was updated successfully!"};
+
+    return { success: true, message: "Your avatar was updated successfully!" };
   } catch (error) {
     console.error("Error updating user avatar:", error);
     return { success: false, error };

@@ -1,4 +1,5 @@
 "use client";
+import { Interview } from "@/types/interview";
 
 interface ClientInterviewCardProps {
   interview: Interview;
@@ -6,12 +7,8 @@ interface ClientInterviewCardProps {
   interviewCard: React.ReactNode;
 }
 
-export default function ClientInterviewCard({ 
-  interviewCard 
+export default function ClientInterviewCard({
+  interviewCard,
 }: ClientInterviewCardProps) {
-  return (
-    <>
-      {interviewCard}
-    </>
-  );
+  return <>{interviewCard}</>;
 }

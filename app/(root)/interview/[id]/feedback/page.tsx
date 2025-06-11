@@ -9,20 +9,18 @@ import {
   getFeedbacksByInterviewId,
 } from "@/lib/actions/general.action";
 import { getCurrentUser } from "@/lib/actions/auth.action";
+import type { Feedback } from "@/types";
 // import { MetalButton } from "@/components/MetalButton";
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-  searchParams: {
-    feedbackId?: string;
-  };
-}
 
-const Feedback = async ({ params, searchParams }: PageProps) => {
+
+const FeedbackPage = async ({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ feedbackId?: string }>;
+}) => {
   const { id } = await params;
-  const { feedbackId } = await searchParams;
+  const resolvedSearchParams = await searchParams;
+  const { feedbackId } = resolvedSearchParams;
   const user = await getCurrentUser();
 
   const interview = await getInterviewById(id);
@@ -31,7 +29,7 @@ const Feedback = async ({ params, searchParams }: PageProps) => {
   let feedback;
   if (feedbackId) {
     // Get specific feedback
-    const feedbacks = await getFeedbacksByInterviewId(id) as [];
+    const feedbacks = await getFeedbacksByInterviewId(id) as Feedback[];
     feedback = feedbacks.find(f => f.id === feedbackId);
   } else {
     // Get latest feedback
@@ -138,4 +136,4 @@ const Feedback = async ({ params, searchParams }: PageProps) => {
   );
 };
 
-export default Feedback;
+export default FeedbackPage;

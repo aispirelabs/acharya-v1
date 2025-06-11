@@ -4,15 +4,14 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, BookOpen, Clock } from "lucide-react";
 import Footer from "@/components/Footer";
 
-interface PageProps {
-  searchParams: {
-    page?: string;
-  };
-}
-
-export default async function MyInterviews({ searchParams }: PageProps) {
+export default async function MyInterviews({ 
+  searchParams 
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const user = await getCurrentUser();
-  const { page } = await searchParams;
+  const resolvedSearchParams = await searchParams;
+  const { page } = resolvedSearchParams;
   const currentPage = Number(page) || 1;
   const itemsPerPage = 9;
 

@@ -6,6 +6,7 @@ import DisplayTechIcons from "./DisplayTechIcons";
 
 import { cn, getRandomInterviewCover } from "@/lib/utils";
 import { getFeedbackByInterviewId } from "@/lib/actions/general.action";
+import { InterviewCardProps } from "@/types";
 
 const InterviewCard = async ({
   interviewId,
@@ -29,25 +30,27 @@ const InterviewCard = async ({
   const normalizedType = /mix/gi.test(type) ? "Mixed" : type;
 
   // Type badge color mapping
-  const typeBadgeColor = {
-    Behavioral: "bg-primary-100 text-primary-600",
-    Mixed: "bg-accent-100 text-accent-600",
-    Technical: "bg-blue-100 text-blue-600",
-  }[normalizedType] || "bg-violet-100 text-violet-600";
+  const typeBadgeColor =
+    {
+      Behavioral: "bg-primary-100 text-primary-600",
+      Mixed: "bg-accent-100 text-accent-600",
+      Technical: "bg-blue-100 text-blue-600",
+    }[normalizedType] || "bg-violet-100 text-violet-600";
 
   // Level badge color mapping
-  const levelBadgeColor = {
-    "entry level": "bg-emerald-100 text-emerald-600",
-    beginner: "bg-teal-100 text-teal-600",
-    junior: "bg-lime-100 text-lime-600",
-    "mid to senior": "bg-amber-100 text-amber-600",
-    senior: "bg-orange-100 text-orange-600",
-    advanced: "bg-sky-100 text-sky-600",
-    expert: "bg-indigo-100 text-indigo-600",
-  }[level?.toLowerCase() || "beginner"] || "bg-green-100 text-green-600";
+  const levelBadgeColor =
+    {
+      "entry level": "bg-emerald-100 text-emerald-600",
+      beginner: "bg-teal-100 text-teal-600",
+      junior: "bg-lime-100 text-lime-600",
+      "mid to senior": "bg-amber-100 text-amber-600",
+      senior: "bg-orange-100 text-orange-600",
+      advanced: "bg-sky-100 text-sky-600",
+      expert: "bg-indigo-100 text-indigo-600",
+    }[level?.toLowerCase() || "beginner"] || "bg-green-100 text-green-600";
 
   const formattedDate = dayjs(
-    feedback?.createdAt || createdAt || Date.now()
+    feedback?.createdAt || createdAt || Date.now(),
   ).format("MMM D, YYYY");
 
   // Use coverImage from props if available, otherwise use random cover
@@ -62,7 +65,7 @@ const InterviewCard = async ({
           <div
             className={cn(
               "absolute top-4 right-4 px-3 py-1 rounded-full text-sm font-medium",
-              typeBadgeColor
+              typeBadgeColor,
             )}
           >
             {normalizedType}
@@ -72,7 +75,7 @@ const InterviewCard = async ({
           <div
             className={cn(
               "absolute top-4 left-4 px-3 py-1 rounded-full text-sm font-medium",
-              levelBadgeColor
+              levelBadgeColor,
             )}
           >
             {level || "Beginner"}
@@ -93,7 +96,9 @@ const InterviewCard = async ({
           </div>
 
           {/* Course Title */}
-          <h3 className="text-xl font-semibold text-center mb-4 capitalize">{role} Course</h3>
+          <h3 className="text-xl font-semibold text-center mb-4 capitalize">
+            {role} Course
+          </h3>
 
           {/* Course Details */}
           <div className="flex flex-wrap gap-4 justify-center mb-6">
@@ -109,22 +114,24 @@ const InterviewCard = async ({
             </div>
 
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Image 
-                src="/star-2.svg" 
-                width={20} 
-                height={20} 
+              <Image
+                src="/star-2.svg"
+                width={20}
+                height={20}
                 alt="score"
                 className="opacity-70"
               />
-              <span className="text-sm">{feedback?.totalScore || "---"}/100</span>
+              <span className="text-sm">
+                {feedback?.totalScore || "---"}/100
+              </span>
             </div>
-            
+
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Image 
-                src="/question.svg" 
-                width={20} 
-                height={20} 
-                alt="lessons" 
+              <Image
+                src="/question.svg"
+                width={20}
+                height={20}
+                alt="lessons"
                 className="opacity-70"
               />
               <span className="text-sm">{questions?.length || 0} Lessons</span>
@@ -149,12 +156,14 @@ const InterviewCard = async ({
               }
               className="w-full"
             >
-              <button className={cn(
-                "w-full py-3 px-4 rounded-full text-sm font-medium transition-all duration-300",
-                feedback
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20"
-                  : "bg-accent text-accent-foreground hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/20"
-              )}>
+              <button
+                className={cn(
+                  "w-full py-3 px-4 rounded-full text-sm font-medium transition-all duration-300",
+                  feedback
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20"
+                    : "bg-accent text-accent-foreground hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/20",
+                )}
+              >
                 {feedback ? "View Progress" : "Start Learning"}
               </button>
             </Link>

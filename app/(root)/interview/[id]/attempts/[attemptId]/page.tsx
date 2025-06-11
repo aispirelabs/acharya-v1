@@ -8,11 +8,11 @@ export default async function InterviewAttempts({
   params,
   searchParams,
 }: {
-  params: { id: string; attemptId: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  params: Promise<{ id: string; attemptId: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { id, attemptId } = params;
-  const { page: pageStr, limit: limitStr } = searchParams || {};
+  const { id, attemptId } = await params;
+  const { page: pageStr, limit: limitStr } = await searchParams || {};
   console.log(pageStr, limitStr);
   // const user = await getCurrentUser();
   const interview = await getInterviewById(id);
@@ -154,4 +154,4 @@ export default async function InterviewAttempts({
       <Footer />
     </div>
   );
-} 
+}

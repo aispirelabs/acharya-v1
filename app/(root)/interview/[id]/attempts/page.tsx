@@ -1,21 +1,24 @@
-import { getInterviewById, getFeedbacksByInterviewId } from "@/lib/actions/general.action";
+import {
+  getInterviewById,
+  getFeedbacksByInterviewId,
+} from "@/lib/actions/general.action";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Star, MessageSquare } from "lucide-react";
 import Footer from "@/components/Footer";
+import { Feedback } from "@/types";
 // import { Interview, InterviewAttempt } from "@/types/interview";
 
-export interface PageProps {
-  params: {
-    id: string;
-    attemptId: string;
-  };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
+export default async function InterviewAttempts({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { id } = await params;
+  const resolvedSearchParams = await searchParams;
+  const { page: pageStr, limit: limitStr } = resolvedSearchParams || {};
 
-
-export default async function InterviewAttempts({ params, searchParams }: PageProps) {
-  const { id } = params;
-  const { page: pageStr, limit: limitStr } =  searchParams;
   // const user = await getCurrentUser();
   const interview = await getInterviewById(id);
 
@@ -28,7 +31,9 @@ export default async function InterviewAttempts({ params, searchParams }: PagePr
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-4">Interview not found</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 mb-4">
+            Interview not found
+          </h1>
           <Link href="/" className="text-primary-600 hover:text-primary-700">
             Return to dashboard
           </Link>
@@ -38,15 +43,20 @@ export default async function InterviewAttempts({ params, searchParams }: PagePr
   }
 
   // Get all feedbacks for this interview with pagination
-  const feedbacks = await getFeedbacksByInterviewId(id, { limit, offset }) as [];
-  const totalFeedbacks = await getFeedbacksByInterviewId(id, { countOnly: true }) as number;
+  const feedbacks = (await getFeedbacksByInterviewId(id, {
+    limit,
+    offset,
+  })) as Feedback[];
+  const totalFeedbacks = (await getFeedbacksByInterviewId(id, {
+    countOnly: true,
+  })) as number;
   const totalPages = Math.ceil(totalFeedbacks / limit);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8 flex justify-between items-center">
-          <Link 
+          <Link
             href={`/`}
             className="inline-flex items-center text-gray-600 hover:text-gray-900"
           >
@@ -69,13 +79,18 @@ export default async function InterviewAttempts({ params, searchParams }: PagePr
 
           {feedbacks.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-600">No feedback has been generated yet.</p>
+              <p className="text-gray-600">
+                No feedback has been generated yet.
+              </p>
             </div>
           ) : (
             <>
               <div className="space-y-4">
                 {feedbacks.map((feedback, index) => (
-                  <div key={feedback.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                  <div
+                    key={feedback.id}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+                  >
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
@@ -88,7 +103,9 @@ export default async function InterviewAttempts({ params, searchParams }: PagePr
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1 text-yellow-600">
                           <Star className="h-5 w-5" />
-                          <span className="font-semibold">{feedback.totalScore}/100</span>
+                          <span className="font-semibold">
+                            {feedback.totalScore}/100
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -100,12 +117,24 @@ export default async function InterviewAttempts({ params, searchParams }: PagePr
                         <span className="font-medium">Category Scores</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {feedback.categoryScores.map((category: { name: string; score: number }, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center">
-                            <span className="text-gray-600">{category.name}</span>
-                            <span className="font-medium text-gray-900">{category.score}/100</span>
-                          </div>
-                        ))}
+                        {feedback.categoryScores.map(
+                          (
+                            category: { name: string; score: number },
+                            idx: number,
+                          ) => (
+                            <div
+                              key={idx}
+                              className="flex justify-between items-center"
+                            >
+                              <span className="text-gray-600">
+                                {category.name}
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                {category.score}/100
+                              </span>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </div>
 
@@ -115,7 +144,9 @@ export default async function InterviewAttempts({ params, searchParams }: PagePr
                         <MessageSquare className="h-4 w-4" />
                         <span className="font-medium">Final Assessment</span>
                       </div>
-                      <p className="text-gray-600 whitespace-pre-wrap">{feedback.finalAssessment}</p>
+                      <p className="text-gray-600 whitespace-pre-wrap">
+                        {feedback.finalAssessment}
+                      </p>
                     </div>
 
                     {/* Action Buttons */}
@@ -163,4 +194,4 @@ export default async function InterviewAttempts({ params, searchParams }: PagePr
       <Footer />
     </div>
   );
-} 
+}
