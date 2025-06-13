@@ -6,8 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "init-firestore": "ts-node --project scripts/tsconfig.json scripts/init-firestore.ts"
+    "lint": "next lint"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.1",
