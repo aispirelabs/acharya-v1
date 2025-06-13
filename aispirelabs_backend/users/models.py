@@ -6,7 +6,7 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # 'username', 'email', 'password', 'first_name', 'last_name' are already in AbstractUser
     # 'name' can be derived from first_name and last_name or use first_name as display name
-    photoURL = models.URLField(max_length=200, blank=True, null=True)
+    photoURL = models.CharField(max_length=200, blank=True, null=True)
     # emailVerified is part of AbstractUser as is_active (though slightly different meaning, can be adapted)
     # For simplicity, we'll use is_active for emailVerified or add a new field if strict adherence is needed.
     # Let's add email_verified explicitly for clarity

@@ -5,6 +5,7 @@ from .serializers import InterviewSerializer, FeedbackSerializer, CreateIntervie
 from .helpers import get_random_interview_cover, generate_interview_questions_ai, generate_feedback_ai
 from django.shortcuts import get_object_or_404
 from users.models import User # Import your custom User model
+from django.db.models import F
 
 class InterviewCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -14,7 +15,7 @@ class InterviewCreateView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-
+        print("data", data)
         # AI Question Generation
         questions = generate_interview_questions_ai(
             role=data['role'],
@@ -42,25 +43,42 @@ class InterviewListView(generics.ListAPIView):
     serializer_class = InterviewSerializer
     permission_classes = [permissions.IsAuthenticated] # Or AllowAny if public listing is desired
 
-    def get_queryset(self):
-        user = self.request.user
+    def get(self, request, *args, **kwargs):
+        user = request.user
         # Example: return interviews for the current user
         # return Interview.objects.filter(user=user).order_by('-created_at')
         # Or, as per original general.action.ts getLatestInterviews (shows others' interviews)
         # and getInterviewsByUserId (shows own interviews)
 
         # For now, let's implement getInterviewsByUserId behavior
-        if 'my_interviews' in self.request.query_params:
-             return Interview.objects.filter(user=user).order_by('-created_at')
+        interviews = Interview.objects.filter(user=user).order_by('-created_at').values('id', 'role', 'type', 'techstack', 'cover_image', 'level','created_at', 'feedbacks')
+
+        return Response(interviews, status=status.HTTP_200_OK)
         # And a general list (excluding own, similar to getLatestInterviews)
         # Note: original logic for getLatestInterviews also had 'finalized == true'
-        return Interview.objects.filter(finalized=True).exclude(user=user).order_by('-created_at')[:20] # Limiting for now
+        # return Interview.objects.filter(finalized=True).exclude(user=user).order_by('-created_at')[:20] # Limiting for now
 
 
 class InterviewDetailView(generics.RetrieveAPIView):
     queryset = Interview.objects.all()
     serializer_class = InterviewSerializer
     permission_classes = [permissions.IsAuthenticated] # Adjust as needed
+    def get(self, request, pk):
+        interview = Interview.objects.filter(user=request.user, id=pk).values('id', 'role', 'type','level','cover_image', 'techstack','questions', 'created_at').first()
+        if interview:
+            feedbacks = list(Feedback.objects.filter(interview_id=pk).values(
+                'id', 
+                'total_score', 
+                'category_scores', 
+                'strengths', 
+                'areas_for_improvement', 
+                'final_assessment',
+                'created_at'
+            ))
+            interview['attempts'] = feedbacks 
+            return Response(interview, status=status.HTTP_200_OK)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 class FeedbackCreateView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]

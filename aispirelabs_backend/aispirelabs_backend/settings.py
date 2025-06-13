@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-#xeje2-lk6^j5-nqrew1yt8jw8luc8l31xm$#l7a%cnzf3h&u7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -165,12 +165,16 @@ SIMPLE_JWT = {
 SIMPLE_JWT['SIGNING_KEY'] = SECRET_KEY
 
 # Ensure this is set in your environment or a secure config, not hardcoded for production
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'YOUR_FALLBACK_GEMINI_API_KEY_HERE_IF_NO_ENV_VAR')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+if not GEMINI_API_KEY:
+    print("WARNING: GEMINI_API_KEY not found in environment variables. AI features will not work.")
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',      # Next.js local development
     'http://127.0.0.1:3000',     # Next.js local development (alternative)
+    'http://localhost:3001',     # Next.js local development (alternative)
+    'http://127.0.0.1:3001',     # Next.js local development (alternative)
     # Add your production frontend URL here, e.g.:
     # 'https://your-frontend-domain.com',
 ]
@@ -180,3 +184,8 @@ CORS_ALLOW_CREDENTIALS = True
 # You might also want to specify allowed methods and headers if default is not enough
 # CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
 # CORS_ALLOW_HEADERS = ['accept', 'authorization', 'content-type', 'user-agent', 'x-csrftoken', 'x-requested-with']
+
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]

@@ -18,11 +18,12 @@ class FeedbackSerializer(serializers.ModelSerializer):
     # interview = InterviewSerializer(read_only=True) # Could be too verbose, primary keys usually suffice
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     interview = serializers.PrimaryKeyRelatedField(queryset=Interview.objects.all(), write_only=True) # For creating feedback
+    interview_id = serializers.UUIDField(source='interview.id', read_only=True)
 
     class Meta:
         model = Feedback
-        fields = ['id', 'interview', 'user', 'total_score', 'category_scores', 'strengths', 'areas_for_improvement', 'final_assessment', 'created_at']
-        read_only_fields = ['id', 'user', 'created_at', 'total_score', 'category_scores', 'strengths', 'areas_for_improvement', 'final_assessment']
+        fields = ['id', 'interview', 'interview_id', 'user', 'total_score', 'category_scores', 'strengths', 'areas_for_improvement', 'final_assessment', 'created_at']
+        read_only_fields = ['id', 'user', 'interview', 'interview_id', 'created_at', 'total_score', 'category_scores', 'strengths', 'areas_for_improvement', 'final_assessment']
         # AI generates score fields, interview ID is for write_only linking
 
 class CreateInterviewSerializer(serializers.Serializer):
