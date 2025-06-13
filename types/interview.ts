@@ -1,3 +1,5 @@
+import { Feedback } from "./index";
+
 export interface Interview {
   id: string; // Assuming UUID string
   user: string; // User ID (foreign key)
@@ -9,7 +11,8 @@ export interface Interview {
   cover_image?: string;
   level: string;
   questions: string[]; // JSONField in Django, maps to array
-  attempts?: InterviewAttempt[]; // Remains as is, client-side or future feature
+  feedbacks?: Feedback[]; // Array of feedbacks for this interview
+  attempts?: InterviewAttempt[]; // Array of attempts for this interview
 }
 
 // This interface is not directly handled by current Django models.
@@ -18,8 +21,9 @@ export interface InterviewAttempt {
   id: string;
   interviewId: string;
   score?: number;
+  total_score?: number;
   feedback?: string;
-  createdAt: string;
+  created_at: string;
   answers?: {
     question: string;
     answer: string;

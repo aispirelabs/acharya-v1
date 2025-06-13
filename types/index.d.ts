@@ -27,7 +27,7 @@ export interface User {
   email: string;
   first_name?: string;
   last_name?: string;
-  photo_url?: string; // snake_case from Django
+  photoURL?: string; // snake_case from Django
   email_verified?: boolean; // snake_case from Django
   auth_provider?: string; // snake_case from Django
   date_joined?: string; // ISO string from Django
@@ -55,7 +55,7 @@ export interface ClientSignUpParams {
   password: string;
   first_name?: string;
   last_name?: string;
-  photo_url?: string; // snake_case to match User model/serializer expectation
+  photoURL?: string; // snake_case to match User model/serializer expectation
 }
 
 

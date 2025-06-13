@@ -11,6 +11,10 @@ import Link from "next/link";
 import { toast } from "sonner";
 import FormField from "@/components/FormField";
 import { useRouter } from "next/navigation";
+import { signIn, signUp, DjangoSignUpParams, DjangoSignInParams } from "@/lib/actions/auth.action";
+import AuthCard from "./auth/AuthCard";
+import AuthHeader from "./auth/AuthHeader";
+import { useAuth } from "@/lib/context/AuthContext";
 
 // Removed Firebase imports:
 // import {
@@ -24,11 +28,8 @@ import { useRouter } from "next/navigation";
 // import { auth } from "@/firebase/client"; // Firebase client setup removed
 
 // Updated server actions (signIn and signUp now point to Django)
-import { signIn, signUp, DjangoSignUpParams, DjangoSignInParams } from "@/lib/actions/auth.action";
 // VerificationScreen import removed as Firebase email verification flow is removed
 // import VerificationScreen from "./auth/VerificationScreen";
-import AuthCard from "./auth/AuthCard";
-import AuthHeader from "./auth/AuthHeader";
 
 type FormType = "sign-in" | "sign-up";
 
@@ -44,6 +45,7 @@ const authFormSchema = (type: FormType) => {
 
 const AuthForm = ({ type }: { type: FormType }) => {
     const router = useRouter();
+    const { checkAuth } = useAuth();
     const formSchema = authFormSchema(type);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -70,14 +72,10 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 const { name, email, password } = values;
 
                 // Prepare params for Django signUp action
-                // Assuming 'name' from form is used as 'username' for Django.
-                // first_name and last_name can be added if form collects them separately.
                 const signUpData: DjangoSignUpParams = {
-                    username: name!, // 'name' field from form is used as username
+                    username: name!,
                     email,
                     password,
-                    // first_name: ..., // Optional: collect separately if needed
-                    // last_name: ...,  // Optional: collect separately if needed
                 };
 
                 const result = await signUp(signUpData);
@@ -86,16 +84,13 @@ const AuthForm = ({ type }: { type: FormType }) => {
                     toast.error(result?.message || "Sign up failed.");
                 } else {
                     toast.success(result.message || "Account created. Please sign in.");
-                    router.push("/sign-in"); // Redirect to sign-in after successful sign-up
+                    router.push("/sign-in");
                 }
-            } else { // Sign-in
+            } else {
                 const { email, password } = values;
 
-                // Prepare params for Django signIn action
-                // Using email as username for login. Django backend needs to support this.
-                // (e.g. by customizing TokenObtainPairSerializer or setting User.USERNAME_FIELD to 'email')
                 const signInData: DjangoSignInParams = {
-                    username: email, // Sending email as username
+                    username: email,
                     password,
                 };
 
@@ -104,12 +99,14 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 if (!result?.success || !result.tokens) {
                     toast.error(result?.message || "Sign in failed.");
                 } else {
-                    // Store tokens in localStorage (client-side responsibility)
                     localStorage.setItem("access_token", result.tokens.access);
                     localStorage.setItem("refresh_token", result.tokens.refresh);
 
-                    toast.success(result.message || "Sign in successfully.");
-                    router.push("/"); // Redirect to dashboard or home page
+                    // Check authentication state
+                    await checkAuth();
+
+                    toast.success(result.message || "Signed in successfully.");
+                    router.push("/dashboard");
                 }
             }
         } catch (error) {

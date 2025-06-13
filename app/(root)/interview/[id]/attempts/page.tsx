@@ -1,33 +1,67 @@
-import {
-  getInterviewById,
-  getFeedbacksByInterviewId,
-} from "@/lib/actions/general.action";
+"use client";
+
+import { use } from "react";
+import { getInterviewById, getMyFeedbackForInterview } from "@/lib/actions/general.action";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Star, MessageSquare } from "lucide-react";
 import Footer from "@/components/Footer";
 import { Feedback } from "@/types";
-// import { Interview, InterviewAttempt } from "@/types/interview";
+import { useAuth } from "@/lib/context/AuthContext";
+import { useEffect, useState } from "react";
 
-export default async function InterviewAttempts({
-  params,
-  searchParams,
-}: {
+interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const { id } = await params;
-  const resolvedSearchParams = await searchParams;
-  const { page: pageStr, limit: limitStr } = resolvedSearchParams || {};
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
 
-  // const user = await getCurrentUser();
-  const interview = await getInterviewById(id);
+export default function InterviewAttempts({ params, searchParams }: PageProps) {
+  const { id } = use(params);
+  const resolvedSearchParams = use(searchParams);
+  const { user, loading } = useAuth();
+  const [interview, setInterview] = useState<any>(null);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Pagination
-  const page = Number(pageStr) || 1;
-  const limit = Number(limitStr) || 5;
+  const page = Number(resolvedSearchParams?.page) || 1;
+  const limit = Number(resolvedSearchParams?.limit) || 5;
   const offset = (page - 1) * limit;
 
-  if (!interview) {
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      try {
+        const accessToken = localStorage.getItem('access_token');
+        const interviewData = await getInterviewById(id, accessToken);
+        if (!interviewData) {
+          return;
+        }
+        setInterview(interviewData);
+
+        // Get all feedbacks for this interview
+        const feedbacksData = await getMyFeedbackForInterview(id, accessToken);
+        if (feedbacksData) {
+          setFeedbacks(feedbacksData);
+        }
+        console.log("Feedbacks", feedbacksData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!loading) {
+      fetchData();
+    }
+  }, [id, user, loading]);
+
+  if (loading || isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || !interview) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -42,15 +76,9 @@ export default async function InterviewAttempts({
     );
   }
 
-  // Get all feedbacks for this interview with pagination
-  const feedbacks = (await getFeedbacksByInterviewId(id, {
-    limit,
-    offset,
-  })) as Feedback[];
-  const totalFeedbacks = (await getFeedbacksByInterviewId(id, {
-    countOnly: true,
-  })) as number;
+  const totalFeedbacks = feedbacks.length;
   const totalPages = Math.ceil(totalFeedbacks / limit);
+  const paginatedFeedbacks = feedbacks.slice(offset, offset + limit);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -77,7 +105,7 @@ export default async function InterviewAttempts({
             Interview Feedback History
           </h1>
 
-          {feedbacks.length === 0 ? (
+          {paginatedFeedbacks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-600">
                 No feedback has been generated yet.
@@ -86,7 +114,7 @@ export default async function InterviewAttempts({
           ) : (
             <>
               <div className="space-y-4">
-                {feedbacks.map((feedback, index) => (
+                {paginatedFeedbacks.map((feedback, index) => (
                   <div
                     key={feedback.id}
                     className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
@@ -97,14 +125,14 @@ export default async function InterviewAttempts({
                           Feedback {totalFeedbacks - (offset + index)}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          {new Date(feedback.createdAt).toLocaleDateString()}
+                          {new Date(feedback.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1 text-yellow-600">
                           <Star className="h-5 w-5" />
                           <span className="font-semibold">
-                            {feedback.totalScore}/100
+                            {feedback.total_score}/100
                           </span>
                         </div>
                       </div>
@@ -117,7 +145,7 @@ export default async function InterviewAttempts({
                         <span className="font-medium">Category Scores</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {feedback.categoryScores.map(
+                        {feedback.category_scores.map(
                           (
                             category: { name: string; score: number },
                             idx: number,
@@ -145,14 +173,14 @@ export default async function InterviewAttempts({
                         <span className="font-medium">Final Assessment</span>
                       </div>
                       <p className="text-gray-600 whitespace-pre-wrap">
-                        {feedback.finalAssessment}
+                        {feedback.final_assessment}
                       </p>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex items-center justify-end gap-4 mt-4 pt-4 border-t border-gray-100">
                       <Link
-                        href={`/interview/${feedback.interviewId}/feedback?feedbackId=${feedback.id}`}
+                        href={`/interview/${feedback.interview_id}/feedback?feedbackId=${feedback.id}`}
                         className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
                       >
                         View Full Feedback

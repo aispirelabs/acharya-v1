@@ -1,33 +1,90 @@
+"use client";
+
 import Image from "next/image";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Mic, Brain, Clock, Lightbulb } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/context/AuthContext";
+import { use } from "react";
+import Link from "next/link";
+import { ChevronLeft, Star, MessageSquare, CheckCircle, XCircle } from "lucide-react";
+import Footer from "@/components/Footer";
+import { Interview, InterviewAttempt } from "@/types/interview";
+import { getMyFeedbackForInterview, getInterviewById } from "@/lib/actions/general.action";
 
 import Agent from "@/components/Agent";
 import { getRandomInterviewCover } from "@/lib/utils";
+import React from "react";
 
-import {
-  getFeedbackByInterviewId,
-  getInterviewById,
-} from "@/lib/actions/general.action";
-import { getCurrentUser } from "@/lib/actions/auth.action";
-import { RouteParams } from "@/types";
+interface PageProps {
+  params: Promise<{ id: string }>;
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
 
-const InterviewDetails = async ({ params }: RouteParams) => {
-  const { id } = await params;
+export default function InterviewDetails({ params, searchParams }: PageProps): React.ReactElement {
+  const { id } = use(params);
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [interview, setInterview] = useState<Interview | null>(null);
+  const [feedback, setFeedback] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const user = await getCurrentUser();
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
 
-  const interview = await getInterviewById(id);
-  if (!interview) redirect("/");
+      try {
+        const accessToken = localStorage.getItem('access_token');
+        const interviewData = await getInterviewById(id, accessToken);
+        if (!interviewData) {
+          router.push("/");
+          return;
+        }
+        setInterview(interviewData);
+        console.log("Interview Data", interviewData);
 
-  const feedback = await getFeedbackByInterviewId({
-    interviewId: id,
-    userId: user?.id || "",
-  });
+        const feedbackData = await getMyFeedbackForInterview(id, accessToken);
+        setFeedback(feedbackData);
+      } catch (error) {
+        console.error("Error fetching interview data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!loading) {
+      fetchData();
+    }
+  }, [id, user, loading, router]);
+
+  if (loading || isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || !interview) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <main className="flex-grow">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Interview not found</h1>
+              <Link
+                href="/my-interviews"
+                className="text-primary-600 hover:text-primary-700"
+              >
+                Back to My Interviews
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   // Use the interview's coverImage if available, otherwise get a random one
-  const imageSrc = interview.coverImage || getRandomInterviewCover();
+  const imageSrc = interview.cover_image || getRandomInterviewCover();
 
   // Normalize the interview type for consistent badge styling
   const normalizedType = /mix/gi.test(interview.type)
@@ -84,7 +141,7 @@ const InterviewDetails = async ({ params }: RouteParams) => {
                 <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-md">
                   <div className="bg-primary-600 rounded-full p-1">
                     <Image
-                      src="/microphone.svg"
+                      src="/globe.svg"
                       width={20}
                       height={20}
                       alt="microphone"
@@ -104,14 +161,14 @@ const InterviewDetails = async ({ params }: RouteParams) => {
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-full">
+              <div className="flex items-center gap-2 bg-gray-10 px-4 py-2 rounded-full">
                 <Image
                   src="/question.svg"
                   width={20}
                   height={20}
                   alt="questions"
                 />
-                <span className="text-gray-700 font-medium">
+                <span className="text-gray-700 bg-sky-550 font-medium">
                   {interview.questions?.length || 0} questions
                 </span>
               </div>
@@ -164,7 +221,7 @@ const InterviewDetails = async ({ params }: RouteParams) => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <Agent
-                userName={user?.name || ""}
+                userName={user?.username || ""}
                 userId={user?.id}
                 userAvatar={user?.photoURL}
                 interviewId={id}
@@ -242,6 +299,4 @@ const InterviewDetails = async ({ params }: RouteParams) => {
       </div>
     </div>
   );
-};
-
-export default InterviewDetails;
+}

@@ -1,23 +1,58 @@
+"use client";
+
+import { use } from "react";
 import { getInterviewById } from "@/lib/actions/general.action";
 import Link from "next/link";
 import { ChevronLeft, Star, MessageSquare, CheckCircle, XCircle } from "lucide-react";
 import Footer from "@/components/Footer";
-import { Interview, InterviewAttempt } from "@/types/interview";
+import { Feedback } from "@/types";
+import { useAuth } from "@/lib/context/AuthContext";
+import { useEffect, useState } from "react";
 
-export default async function InterviewAttempts({
-  params,
-  searchParams,
-}: {
+interface PageProps {
   params: Promise<{ id: string; attemptId: string }>;
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const { id, attemptId } = await params;
-  const { page: pageStr, limit: limitStr } = await searchParams || {};
-  console.log(pageStr, limitStr);
-  // const user = await getCurrentUser();
-  const interview = await getInterviewById(id);
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
 
-  if (!interview) {
+export default function InterviewAttempts({ params, searchParams }: PageProps) {
+  const { id, attemptId } = use(params);
+  const { user, loading } = useAuth();
+  const [interview, setInterview] = useState<any>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+
+      try {
+        const accessToken = localStorage.getItem('access_token');
+        const interviewData = await getInterviewById(id, accessToken);
+        if (!interviewData) {
+          return;
+        }
+        setInterview(interviewData);
+
+        // Find the specific feedback
+        const feedbackData = interviewData.feedbacks?.find((f: Feedback) => f.id === attemptId);
+        setFeedback(feedbackData || null);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (!loading) {
+      fetchData();
+    }
+  }, [id, attemptId, user, loading]);
+
+  if (loading || isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || !interview) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <main className="flex-grow">
@@ -38,16 +73,13 @@ export default async function InterviewAttempts({
     );
   }
 
-  const interviewTyped = interview as Interview;
-  const attempt = interviewTyped.attempts?.find((a: InterviewAttempt) => a.id === attemptId);
-
-  if (!attempt) {
+  if (!feedback) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <main className="flex-grow">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="text-center">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Attempt not found</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Feedback not found</h1>
               <Link
                 href={`/interview/${interview.id}/attempts`}
                 className="text-primary-600 hover:text-primary-700"
@@ -85,7 +117,7 @@ export default async function InterviewAttempts({
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1 text-yellow-600">
                   <Star className="h-5 w-5" />
-                  <span className="font-semibold text-xl">{attempt.score || 'N/A'}</span>
+                  <span className="font-semibold text-xl">{feedback.total_score || 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -93,17 +125,19 @@ export default async function InterviewAttempts({
 
           {/* Attempt Details */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Questions and Answers */}
+            {/* Category Scores */}
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-gray-900">Questions & Answers</h2>
-              {attempt.answers?.map((qa: { question: string; answer: string }, index: number) => (
+              <h2 className="text-xl font-semibold text-gray-900">Category Scores</h2>
+              {feedback.category_scores.map((category: { name: string; score: number }, index: number) => (
                 <div key={index} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Question {index + 1}
+                    {category.name}
                   </h3>
-                  <p className="text-gray-700 mb-4">{qa.question}</p>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-gray-600 whitespace-pre-wrap">{qa.answer}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-yellow-600">
+                      <Star className="h-5 w-5" />
+                      <span className="font-semibold text-xl">{category.score}/100</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -112,19 +146,13 @@ export default async function InterviewAttempts({
             {/* Feedback Section */}
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900">Feedback</h2>
-              {attempt.feedback ? (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                  <div className="flex items-center gap-2 text-gray-700 mb-4">
-                    <MessageSquare className="h-5 w-5" />
-                    <span className="font-medium">Detailed Feedback</span>
-                  </div>
-                  <p className="text-gray-600 whitespace-pre-wrap">{attempt.feedback}</p>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center gap-2 text-gray-700 mb-4">
+                  <MessageSquare className="h-5 w-5" />
+                  <span className="font-medium">Detailed Feedback</span>
                 </div>
-              ) : (
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                  <p className="text-gray-600">No feedback available for this attempt.</p>
-                </div>
-              )}
+                <p className="text-gray-600 whitespace-pre-wrap">{feedback.final_assessment}</p>
+              </div>
 
               {/* Improvement Suggestions */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
@@ -134,14 +162,22 @@ export default async function InterviewAttempts({
                     <CheckCircle className="h-5 w-5 text-green-500 mt-1" />
                     <div>
                       <p className="font-medium text-gray-900">Strengths</p>
-                      <p className="text-gray-600">Your technical knowledge and problem-solving approach were strong.</p>
+                      <ul className="list-disc list-inside text-gray-600">
+                        {feedback.strengths.map((strength: string, index: number) => (
+                          <li key={index}>{strength}</li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <XCircle className="h-5 w-5 text-red-500 mt-1" />
                     <div>
                       <p className="font-medium text-gray-900">Areas to Focus On</p>
-                      <p className="text-gray-600">Consider improving your code organization and documentation.</p>
+                      <ul className="list-disc list-inside text-gray-600">
+                        {feedback.areas_for_improvement.map((area: string, index: number) => (
+                          <li key={index}>{area}</li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
                 </div>

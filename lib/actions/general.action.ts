@@ -30,6 +30,8 @@ export async function createInterview(
     return { success: false, error: "Authentication token not provided." };
   }
   try {
+    console.log("createInterview", params);
+    console.log("API BASE URL", API_BASE_URL);
     const response = await fetch(`${API_BASE_URL}/acharya_ai/interviews/create/`, {
       method: "POST",
       headers: {

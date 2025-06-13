@@ -196,11 +196,11 @@ const Agent = ({
         id: "feedback-toast",
       });
 
+      const accessToken = localStorage.getItem('access_token');
       const { success, feedbackId: id } = await createFeedback({
-        interviewId: interviewId!,
-        userId: userId!,
+        interview_id: interviewId!,
         transcript: messages,
-      });
+      }, accessToken);
 
       if (success && id) {
         toast.success("Feedback generated successfully!", {

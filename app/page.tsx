@@ -1,16 +1,29 @@
+"use client";
+
 // import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Brain, Sparkles, Users } from "lucide-react";
-import { getCurrentUser } from "@/lib/actions/auth.action";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/context/AuthContext";
 import Footer from "@/components/Footer";
 
-export default async function LandingPage() {
-  const user = await getCurrentUser();
-  
-  // Redirect authenticated users to their dashboard
+export default function LandingPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.push("/dashboard");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   if (user) {
-    redirect("/dashboard");
+    return null;
   }
 
   return (
