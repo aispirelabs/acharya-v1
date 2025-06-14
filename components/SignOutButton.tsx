@@ -1,34 +1,29 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { signOut } from '@/lib/actions/auth.action'; // This is the server action
+// Removed: import { signOut } from '@/lib/actions/auth.action';
+import { useAuth } from '@/lib/context/AuthContext'; // Import useAuth
 
 const SignOutButton = () => {
-  const router = useRouter();
+  // Removed: const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const { signOut: contextSignOut } = useAuth(); // Get signOut from context
 
   const handleSignOut = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-
-      // Call the server action (optional, if it performs server-side cleanup like token blacklisting)
-      // The current refactored signOut server action is mostly a placeholder.
-      await signOut();
-
-      // Clear client-side tokens - THIS IS THE KEY CHANGE
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-
+      await contextSignOut(); // Call signOut from AuthContext
       toast.success('Signed out successfully');
-      router.push('/sign-in'); // Redirect to sign-in page
+      // Redirection is handled by signOutAndRedirect within AuthContext's signOut method
     } catch (error) {
       console.error('Error signing out:', error);
       toast.error('Failed to sign out. Please try again.');
+      // It's possible that signOutAndRedirect in apiClient already handles errors,
+      // but an additional catch here can handle UI-specific error feedback.
     } finally {
       setIsLoading(false);
     }

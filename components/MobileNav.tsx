@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import React, { useState, Suspense } from "react"; // Import React, Suspense
 import Image from "next/image";
 import Link from "next/link";
-import { UserIcon, LogOut } from "lucide-react";
+import { UserIcon, LogOut, PlusCircle } from "lucide-react"; // Added PlusCircle for new menu item
 import { useAuth } from "@/lib/context/AuthContext";
-import InterviewFormDialog from "./interview/InterviewFormDialog";
+// import InterviewFormDialog from "./interview/InterviewFormDialog"; // To be lazy-loaded
+
+const InterviewFormDialog = React.lazy(() => import("./interview/InterviewFormDialog"));
 
 export default function MobileNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -43,7 +46,20 @@ export default function MobileNav() {
             <p className="text-sm font-medium text-gray-900">{user.first_name || user.username}</p>
           </div>
           <div className="py-1">
-            <InterviewFormDialog />
+            {/*ชัดเจนมากขึ้นในการเรียก InterviewFormDialog */}
+            <Suspense fallback={
+              <div className="flex items-center px-4 py-2 text-sm text-gray-700 opacity-50">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Loading Form...
+              </div>
+            }>
+              <InterviewFormDialog trigger={
+                <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  New Interview
+                </button>
+              }/>
+            </Suspense>
             <Link
               href="/my-interviews"
               className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"

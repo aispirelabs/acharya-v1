@@ -11,10 +11,26 @@ import Link from "next/link";
 import { toast } from "sonner";
 import FormField from "@/components/FormField";
 import { useRouter } from "next/navigation";
-import { signIn, signUp, DjangoSignUpParams, DjangoSignInParams } from "@/lib/actions/auth.action";
+// Removed: import { signIn, signUp, DjangoSignUpParams, DjangoSignInParams } from "@/lib/actions/auth.action";
+import { request, setTokens } from "@/lib/apiClient"; // Import apiClient functions
 import AuthCard from "./auth/AuthCard";
 import AuthHeader from "./auth/AuthHeader";
 import { useAuth } from "@/lib/context/AuthContext";
+
+// Define types for sign-up and sign-in payloads if not available elsewhere
+interface DjangoSignUpParams {
+    username: string;
+    email: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+}
+
+interface DjangoSignInParams {
+    username: string; // Or email, depending on backend config
+    password: string;
+}
+
 
 // Removed Firebase imports:
 // import {
@@ -73,45 +89,48 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
                 // Prepare params for Django signUp action
                 const signUpData: DjangoSignUpParams = {
-                    username: name!,
+                    username: name!, // Assuming name from form is username
                     email,
                     password,
                 };
+                // Use apiClient.request for sign-up
+                await request('POST', '/users/register/', signUpData);
+                // apiClient.request throws an error for non-ok responses.
+                // If it doesn't throw, the request was successful.
+                toast.success("Account created successfully. Please sign in.");
+                router.push("/sign-in");
 
-                const result = await signUp(signUpData);
-
-                if (!result?.success) {
-                    toast.error(result?.message || "Sign up failed.");
-                } else {
-                    toast.success(result.message || "Account created. Please sign in.");
-                    router.push("/sign-in");
-                }
-            } else {
+            } else { // Sign-in
                 const { email, password } = values;
 
                 const signInData: DjangoSignInParams = {
-                    username: email,
+                    username: email, // Assuming email is used as username for login
                     password,
                 };
 
-                const result = await signIn(signInData);
+                // Use apiClient.request for sign-in
+                const result = await request('POST', '/users/login/', signInData);
 
-                if (!result?.success || !result.tokens) {
-                    toast.error(result?.message || "Sign in failed.");
-                } else {
-                    localStorage.setItem("access_token", result.tokens.access);
-                    localStorage.setItem("refresh_token", result.tokens.refresh);
+                // Assuming the login endpoint returns tokens in the shape: { access: string, refresh: string, user: any }
+                // The actual user object might be nested or part of the response.
+                // apiClient.request will throw an error if the request fails (e.g. 401 for bad creds)
+                // So, if we reach here, the request was successful.
+                if (result && result.access && result.refresh) {
+                    setTokens(result.access, result.refresh); // Use apiClient's setTokens
 
-                    // Check authentication state
-                    await checkAuth();
+                    await checkAuth(); // Refresh auth context
 
-                    toast.success(result.message || "Signed in successfully.");
+                    toast.success("Signed in successfully.");
                     router.push("/dashboard");
+                } else {
+                    // This case might occur if the server response is 2xx but doesn't contain expected tokens.
+                    toast.error("Sign in failed: Invalid server response.");
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("AuthForm onSubmit error:", error);
-            toast.error("An unexpected error occurred. Please try again.");
+            // apiClient.request throws an error with a message (e.g., from server response or network error)
+            toast.error(error.message || "An unexpected error occurred. Please try again.");
         } finally {
             setIsLoading(false);
         }

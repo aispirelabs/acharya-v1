@@ -21,7 +21,18 @@ export default function RootLayout({
   }, [user, loading, router]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    // Enhanced loading state
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-dark-100">
+        <div className="flex flex-col items-center">
+          {/* You can use a simple spinner here if available as a component, or just text */}
+          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+            Loading your experience...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {

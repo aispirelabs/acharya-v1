@@ -6,11 +6,15 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
-import { vapi } from "@/lib/vapi.sdk";
+import { vapi } from "@/lib/vapi.sdk"; // Assuming vapi.sdk was restored or is available
 import { interviewer } from "@/constants";
-import { createFeedback } from "@/lib/actions/general.action";
-import CallHint from "@/components/CallHint";
+// Removed: import { createFeedback } from "@/lib/actions/general.action";
+import { request, getAccessToken } from "@/lib/apiClient"; // Import apiClient functions
+// Removed: import CallHint from "@/components/CallHint";
 import { AgentProps } from "@/types";
+import CallView from "./agent/CallView"; // Import new child components
+import TranscriptDisplay from "./agent/TranscriptDisplay";
+import CallControls from "./agent/CallControls";
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -24,7 +28,7 @@ interface SavedMessage {
   content: string;
 }
 
-const Agent = ({
+const Agent = React.memo(({ // Ensure Agent itself is memoized, already done in a previous step
   userName,
   userId,
   interviewId,
@@ -37,7 +41,7 @@ const Agent = ({
   const [messages, setMessages] = useState<SavedMessage[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastMessage, setLastMessage] = useState<string>("");
-  const [showCallHint, setShowCallHint] = useState(true);
+  // Removed: const [showCallHint, setShowCallHint] = useState(true);
   const [lastActivityTimestamp, setLastActivityTimestamp] = useState<number>(
     Date.now(),
   );
@@ -182,7 +186,7 @@ const Agent = ({
       vapi.off("speech-end", onSpeechEnd);
       vapi.off("error", onError);
     };
-  }, [currentQuestionIndex, totalQuestions, handleDisconnect, questions]);
+  }, [currentQuestionIndex, totalQuestions, handleDisconnect, questions]); // `questions` prop should be stable or memoized by parent
 
   // Handle messages and call status changes
   useEffect(() => {
@@ -196,23 +200,36 @@ const Agent = ({
         id: "feedback-toast",
       });
 
-      const accessToken = localStorage.getItem('access_token');
-      const { success, feedbackId: id } = await createFeedback({
-        interview_id: interviewId!,
-        transcript: messages,
-      }, accessToken);
+      const accessToken = getAccessToken(); // Use apiClient
+      if (!accessToken) {
+        toast.error("Authentication error. Please sign in again.", { id: "feedback-toast" });
+        router.push("/sign-in");
+        return;
+      }
+      try {
+        const feedbackData = await request("POST", "/feedback/", { // Assuming endpoint
+          interview_id: interviewId!,
+          transcript: messages,
+        });
 
-      if (success && id) {
-        toast.success("Feedback generated successfully!", {
+        if (feedbackData && feedbackData.id) { // Assuming response contains feedback id
+          toast.success("Feedback generated successfully!", {
+            id: "feedback-toast",
+          });
+          router.push(`/interview/${interviewId}/feedback`);
+        } else {
+          console.log("Error saving feedback or invalid response:", feedbackData);
+          toast.error("Failed to generate feedback: Invalid server response.", {
+            id: "feedback-toast",
+          });
+          // Decide if router.push("/") is appropriate here or just let user stay
+        }
+      } catch (error: any) {
+        console.error("Error creating feedback:", error);
+        toast.error(error.message || "Failed to generate feedback.", {
           id: "feedback-toast",
         });
-        router.push(`/interview/${interviewId}/feedback`);
-      } else {
-        console.log("Error saving feedback");
-        toast.error("Failed to generate feedback", {
-          id: "feedback-toast",
-        });
-        router.push("/");
+        // Decide if router.push("/") is appropriate here
       }
     };
 
@@ -227,9 +244,9 @@ const Agent = ({
         handleGenerateFeedback(messages);
       }
     }
-  }, [messages, callStatus, interviewId, router, type, userId]);
+  }, [messages, callStatus, interviewId, router, type, userId]); // `type` and `userId` props
 
-  const handleCall = async () => {
+  const handleCall = useCallback(async () => { // Wrap handleCall in useCallback
     setCallStatus(CallStatus.CONNECTING);
 
     if (type === "generate") {
@@ -310,20 +327,9 @@ const Agent = ({
       )}
 
       <div className="w-full flex justify-center relative">
-        {callStatus === CallStatus.INACTIVE && showCallHint && (
-          <CallHint
-            targetId="call-button"
-            timeoutDuration={10000}
-            text={
-              type === "generate"
-                ? "Click CALL to generate the interview"
-                : "Click CALL to start the interview"
-            }
-            onDismiss={() => setShowCallHint(false)}
-          />
-        )}
+        {/* CallHint and showCallHint logic removed */}
 
-        {callStatus !== "ACTIVE" ? (
+        {callStatus !== CallStatus.ACTIVE ? (
           <button
             id="call-button"
             className="relative btn-call"
@@ -357,4 +363,4 @@ const Agent = ({
   );
 };
 
-export default Agent;
+export default React.memo(Agent); // Memoize Agent component

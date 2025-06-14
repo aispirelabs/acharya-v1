@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { User } from "@/types"; // User type now has snake_case fields from Django
-import SignOutButton from "./SignOutButton"; // Assuming SignOutButton handles its own token clearing or calls an action
+import React, { Suspense } from "react"; // Import React and Suspense
+import Link from "next/link";
+import { User } from "@/types";
+import SignOutButton from "./SignOutButton";
 import AvatarPicker from "./avatar/AvatarPicker";
-import InterviewFormDialog from "./interview/InterviewFormDialog";
+// import InterviewFormDialog from "./interview/InterviewFormDialog"; // To be lazy-loaded
+
+const InterviewFormDialog = React.lazy(() => import("./interview/InterviewFormDialog"));
 
 interface NavbarProps {
-  user: User | null; // User type has been updated (snake_case fields)
+  user: User | null;
 }
 
 export default function Navbar({ user }: NavbarProps) {
@@ -28,11 +33,17 @@ export default function Navbar({ user }: NavbarProps) {
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
-            <InterviewFormDialog trigger={
-              <button className="inline-flex items-center justify-center px-6 py-3 bg-white text-primary-600 rounded-xl font-medium hover:bg-gray-100 transition-colors">
-                Start New Interview
+            <Suspense fallback={
+              <button className="inline-flex items-center justify-center px-6 py-3 bg-white text-primary-600 rounded-xl font-medium opacity-50 cursor-not-allowed">
+                Loading...
               </button>
-            } />
+            }>
+              <InterviewFormDialog trigger={
+                <button className="inline-flex items-center justify-center px-6 py-3 bg-white text-primary-600 rounded-xl font-medium hover:bg-gray-100 transition-colors">
+                  Start New Interview
+                </button>
+              } />
+            </Suspense>
             <Link
               href="/my-interviews"
               className="inline-flex items-center justify-center px-6 py-3 bg-white text-primary-600 rounded-xl font-medium hover:bg-gray-100 transition-colors"

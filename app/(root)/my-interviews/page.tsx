@@ -1,49 +1,82 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react"; // Added React, Suspense
 import { useAuth } from "@/lib/context/AuthContext";
-import { getMyInterviews } from "@/lib/actions/general.action";
+// Removed: import { getMyInterviews } from "@/lib/actions/general.action";
+import { request, getAccessToken } from "@/lib/apiClient"; // Added apiClient imports
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, BookOpen, Clock } from "lucide-react";
-import Footer from "@/components/Footer";
+// Removed: import Footer from "@/components/Footer";
+import MyInterviewCard from "@/components/MyInterviewCard";
 import { Interview } from "@/types/interview";
+import SkeletonCard from "@/components/SkeletonCard"; // Import SkeletonCard
+
+const Footer = React.lazy(() => import("@/components/Footer"));
 
 export default function MyInterviews() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [interviewsError, setInterviewsError] = useState<string | null>(null); // Added error state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 9;
+  const itemsPerPage = 9; // Display up to 9 cards per page
 
   useEffect(() => {
     const fetchInterviews = async () => {
-      if (!user) return;
-
+      if (!user) {
+        setIsLoading(false); // Not loading if no user
+        return;
+      }
+      setIsLoading(true); // Set loading true before fetch
       try {
-        const accessToken = localStorage.getItem('access_token');
-        const interviewsData = await getMyInterviews(accessToken);
-        if (interviewsData) {
-          setInterviews(interviewsData);
+        const accessToken = getAccessToken(); // Use apiClient
+        if (!accessToken) {
+            console.log("No access token, cannot fetch interviews.");
+            setInterviews([]); // Clear interviews if no token
+            setIsLoading(false);
+            return;
         }
-      } catch (error) {
-        console.error("Error fetching interviews:", error);
+        // Assuming '/interviews/my/' is the endpoint for user's interviews
+        const interviewsData = await request("GET", "/interviews/my/");
+        if (interviewsData && Array.isArray(interviewsData)) {
+          setInterviews(interviewsData);
+          setInterviewsError(null); // Clear error on success
+        } else {
+          setInterviews([]);
+          // Consider setting an error if data is not array and not explicitly null/empty for "no interviews"
+          // For now, assuming API contract is an array or error.
+        }
+      } catch (error: any) {
+        console.error("Error fetching interviews:", error.message);
+        setInterviewsError("Failed to load your interviews. Please try again later.");
+        setInterviews([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (!loading) {
+    if (!authLoading) { // Only fetch when auth state is resolved
       fetchInterviews();
     }
-  }, [user, loading]);
+  }, [user, authLoading]);
 
   const totalPages = Math.ceil((interviews?.length || 0) / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentInterviews = interviews?.slice(startIndex, endIndex) || [];
 
-  if (loading || isLoading) {
-    return <div>Loading...</div>;
+  // Initial global loading (auth check)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-dark-100">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+            Loading your session...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -66,64 +99,33 @@ export default function MyInterviews() {
             <h1 className="text-3xl font-bold text-gray-900">My Interviews</h1>
           </div>
 
-          {/* Interviews Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {currentInterviews.map((interview) => (
-              <div key={interview.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{interview.role}</h3>
-                    <p className="text-sm text-gray-600">{interview.type}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    interview.finalized 
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-blue-100 text-blue-700'
-                  }`}>
-                    {interview.finalized ? 'Completed' : 'In Progress'}
-                  </span>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <BookOpen className="h-4 w-4" />
-                    <span>{interview.techstack.join(", ")}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Clock className="h-4 w-4" />
-                    <span>{new Date(interview.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  {interview.finalized ? (
-                    <Link
-                      href={`/interview/${interview.id}/feedback`}
-                      className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-                    >
-                      View Feedback
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/interview/${interview.id}`}
-                      className="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-                    >
-                      Continue Interview
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  )}
-                  <Link
-                    href={`/interview/${interview.id}/attempts`}
-                    className="text-gray-600 hover:text-gray-900 text-sm font-medium"
-                  >
-                    View Attempts
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Interviews Grid - Now handles isLoading, error, empty, and data states */}
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {[...Array(itemsPerPage)].map((_, index) => ( // Show skeleton cards based on itemsPerPage
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          ) : interviewsError ? (
+            <div className="text-center py-10 text-red-500 bg-red-50 border border-red-200 rounded-lg p-6">
+              <p>{interviewsError}</p>
+              {/* Optionally, add a retry button here */}
+            </div>
+          ) : currentInterviews.length === 0 ? (
+            <div className="text-center py-10 text-gray-500 bg-gray-100 rounded-lg p-6">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-2">No interviews found.</h2>
+              <p className="text-sm sm:text-base">Start by creating a new interview in your dashboard.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {currentInterviews.map((interview) => (
+                <MyInterviewCard key={interview.id} interview={interview} />
+              ))}
+            </div>
+          )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
+          {/* Pagination - only show if there are interviews and more than one page */}
+          {interviews.length > 0 && totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -154,7 +156,9 @@ export default function MyInterviews() {
           )}
         </div>
       </main>
-      <Footer />
+      <Suspense fallback={<div>Loading Footer...</div>}>
+        <Footer />
+      </Suspense>
     </div>
   );
-} 
+}
